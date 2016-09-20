@@ -1,6 +1,6 @@
 # MIPT_Plot
 - Небольшой скрипт для быстрого  **автоматического** создания простейших графиков.
-![LaTeX]https://github.com/gkorepanov/MIPT_Plot/blob/master/screenshots/LaTeX.png
+![LaTeX](https://github.com/gkorepanov/MIPT_Plot/blob/master/screenshots/LaTeX.png)
 - Версия сырая, требует допила.
 - Проверок на ошибки нет.
 - В LaTeX даёт перкрасный результат, под остальные терминалы требует индивидуальной настройки/общего допила
