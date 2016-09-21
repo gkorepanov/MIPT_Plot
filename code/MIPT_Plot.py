@@ -34,7 +34,7 @@ class C_Plot(object):
 	index = 0
 	def __init__ (self):
 		C_Plot.index +=1
-		self.tempname = "data" + str(C_Plot.index) + '.dat'
+		self.tempname = "data" + str(C_Plot.index) + '.mptplt'
 		self.fit = 0
 		self.plots_num = 1
 
@@ -179,7 +179,38 @@ def init_g(self, preview):
 
 		self.g(s)
 
+		s = '''
+		set grid ytics lc rgb "#bbbbbb" lw 1 lt 0
+		set grid xtics lc rgb "#bbbbbb" lw 1 lt 0
+
+		set grid mytics lc rgb "#cccccc" lw 1 lt 0
+		set grid mxtics lc rgb "#cccccc" lw 1 lt 0
+
+		set fit errorvariables
+
+		unset key
+		'''
+
+		self.g(s)
+
+		
+		if self.x_title is not None:
+			self.g.xlabel(self.x_title)
+
+		if self.y_title is not None:
+			self.g.ylabel(self.y_title)
+
+		if (self.x_min is not None) and (self.x_max is not None):
+			self.g('set xrange [' + str(self.x_min) + ':' + str(self.x_max) + ']')
+
+		if (self.y_min is not None) and (self.y_max is not None):
+			self.g('set yrange [' + str(self.y_min) + ':' + str(self.y_max) + ']')
+
+
+
+
 	else:
+		raw_input(' ')
 		self.g.reset()
 		self.g('unset multiplot')
 		self.g('set output "' + self.output + '"')
@@ -200,26 +231,15 @@ def plot(self, preview = 0):
 	self.init_g(preview)
 
 
-	if self.x_title is not None:
-		self.g.xlabel(self.x_title)
-
-	if self.y_title is not None:
-		self.g.ylabel(self.y_title)
-
-	if (self.x_min is not None) and (self.x_max is not None):
-		self.g('set xrange [' + str(self.x_min) + ':' + str(self.x_max) + ']')
-
-	if (self.y_min is not None) and (self.y_max is not None):
-		self.g('set yrange [' + str(self.y_min) + ':' + str(self.y_max) + ']')
-
+	index = 0
 
 	for plot in self.plots:
 		column = 1
 
 		for i in xrange(1, plot.plots_num+1):
-
+			index += 1
 			print "---------------------------------------------------------------------------------------------"
-			print "PLOTTING Graph number " + str(i)
+			print "PLOTTING Graph number " + str(index)
 			print "---------------------------------------------------------------------------------------------"
 
 			if plot.color is None:
@@ -230,16 +250,6 @@ def plot(self, preview = 0):
 			s = '''
 				set style line 1 lc ''' + str(color) + ''' pt 7 ps 1.2 lt 5 lw 3
 				set style line 2 lc ''' + str(color) + ''' pt 7 ps 0 lt 5 lw 1
-
-				set grid ytics lc rgb "#bbbbbb" lw 1 lt 0
-				set grid xtics lc rgb "#bbbbbb" lw 1 lt 0
-	
-				set grid mytics lc rgb "#cccccc" lw 1 lt 0
-				set grid mxtics lc rgb "#cccccc" lw 1 lt 0
-
-				set fit errorvariables
-
-				unset key
 				'''
 
 			s += plot.extra
@@ -305,9 +315,12 @@ def plot(self, preview = 0):
 				s +=	', f(x) ls 1 with lines'
 
 			self.g(s)
-			if preview:
-				raw_input('')
+			#if preview:
+				#raw_input('')
 
+
+
+		
 
 C_Plotter.copydata = copydata
 C_Plotter.loadsettings = loadsettings
