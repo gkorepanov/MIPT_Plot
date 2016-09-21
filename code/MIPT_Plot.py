@@ -23,8 +23,16 @@ class C_Plot(object):
 		self.labelx = None
 		self.labely = None
 		self.labeltext = None
-		self.labelsize = None
+		self.fontsize = "15"
 		self.term = "epslatex"
+
+		self.xmax = 0
+		self.ymax = 0
+
+		self.fit = 1
+		self.extra = ""
+
+		self.number = 1
 
 
 
@@ -38,7 +46,7 @@ def loadfile():
 	for line in file:
 		items = line.rstrip("\n").split(' ')
 		items[0] = items[0][0:-1]
-		#print items
+		print items
 		if items[0] == "x_error":
 			plot.xerror = int(items[1])
 		elif items[0] == "y_error":
@@ -52,8 +60,10 @@ def loadfile():
 			plot.ytitle = ' '.join(items[1:])
 		elif items[0] == "x_limits":
 			plot.xlimits = '['+items[1]+':'+items[2]+']'
+			plot.xmax = int(items[2])
 		elif items[0] == "y_limits":
 			plot.ylimits = '['+items[1]+':'+items[2]+']'
+			plot.ymax = int(items[2])
 
 		elif items[0] == "label":
 			plot.label = items[1]
@@ -63,18 +73,26 @@ def loadfile():
 			plot.labely = items[1]
 		elif items[0] == "label_text":
 			plot.labeltext = ' '.join(items[1:]).strip('"')
-		elif items[0] == "label_size":
-			plot.labelsize = items[1]
-		
+		elif items[0] == "font_size":
+			plot.fontsize = items[1]
 		elif items[0] == "term":
 			plot.term = ' '.join(items[1:])
+
+
+		elif items[0] == "extra":
+			plot.extra = plot.extra + ' '.join(items[1:])+'\n'
+
+		elif items[0] == "fit":
+			plot.fit = int(items[1])
+		elif items[0] == "plots_number":
+			plot.number = int(items[1])
 
 		elif items[0] == "data":
 			break
 		else: 
 			pass
 
-
+	print "SEE", plot.fit
 	proceed(file)
 	file.close()
 
@@ -97,18 +115,19 @@ def proceed(file):
 
 
 def doplot():
-	g = Gnuplot.Gnuplot()#debug=1)
-	g('f(x)=a*x+b')
+	g = Gnuplot.Gnuplot(debug=1)
+	if plot.fit:
+		g('f(x)=a*x+b')
 # Using of temporary file. TODO.
-	g('fit f(x) "'+\
-		plot.tempname+\
-		'" using 1:2 via a,b')
+		g('fit f(x) "'+\
+			plot.tempname+\
+			'" using 1:2 via a,b')
 
 
 	g('unset key')
 # TODO: just random values. Make settings
-	g('set term wxt size 1000,600')
-
+	g('set term wxt size 1600,900 font "sansserif, '+\
+		plot.fontsize+'"')
 
 
 	if plot.xtitle:
@@ -118,62 +137,81 @@ def doplot():
 
 
 # TODO: give chance to change style
-	g('set style line 1 lc rgb \'black\' pt 7 ps 2 lt 5 lw 3 # --- blue')
-	if plot.label:
-		s = 'set label sprintf('+\
-		('"$K = %.2f$' if plot.term == "epslatex" else '"K = %.2f')+\
-		(plot.labeltext if plot.labeltext else "")+\
-		'",a)'+\
-			' font "sansserif,'+\
-			(str(plot.labelsize) if plot.labelsize else "") +\
-			'"'
-# Label size doesn't work in LaTeX! TODO.
+	g('''
 
-# TODO: try to do it automatically
+	set style line 1 lc rgb \'black\' pt 7 ps 1.2 lt 5 lw 3
+	set style line 2 lc rgb \'black\' pt 7 ps 0 lt 5 lw 1
+
+	set grid ytics lc rgb "#bbbbbb" lw 1 lt 0
+	set grid xtics lc rgb "#bbbbbb" lw 1 lt 0
+	
+	set grid mytics lc rgb "#cccccc" lw 1 lt 0
+	set grid mxtics lc rgb "#cccccc" lw 1 lt 0
+
+	set fit errorvariables
+
+	''')
+	g(plot.extra)
+
+	if plot.xlimits:
+		g('set xrange ' + plot.xlimits)
+	if plot.ylimits:
+		g('set yrange ' + plot.ylimits)
+
+
+
+	if plot.label and plot.fit:
+		s = 'set label sprintf('+\
+		('"$K = %.2f\\\\pm%.2f$' if plot.term == "epslatex" else '"K = %.2f+-%.2f')+\
+		(plot.labeltext if plot.labeltext else "")+\
+		'",a, a_err)'
+
+
+
 		if plot.labelx and plot.labely:
 			s = s+' at '+str(plot.labelx)+','+\
 			str(plot.labely)
+		else:
+			s = s+' at '+str(plot.xmax*0.1)+','+\
+			str(plot.ymax*0.9)
+
+
 		g(s)
 
-
-	
-
-	s = 'plot ' + (plot.xlimits if (plot.xlimits) else '') + ' '+\
-		(plot.ylimits if (plot.ylimits) else '') +\
-		' "' + plot.tempname
+	s1 =  ' "' + plot.tempname +'"'
+	s = 'plot ' + s1+' using 1:2 ls 1,' + s1
 
 
 	if plot.xerror and plot.yerror:
-		print "here"
-		s = s+'" using 1:2:4:3 ls 1 with xyerrorbars'
+		s = s+' using 1:2:4:3 ls 2 with xyerrorbars'
 	elif plot.xerror:
-		s = s+'" using 1:2:3 ls 1 with xerrorbars'
+		s = s+' using 1:2:3 ls 2 with xerrorbars'
 	elif plot.yerror:
-		s = s+'" using 1:2:3 ls 1 with yerrorbars'
+		s = s+' using 1:2:3 ls 2 with yerrorbars'
 	else:
-		s = s+'" using 1:2 ls 1 with points'
+		s = s+' using 1:2 ls 2 with points'
 		
-
-	s = s +	', f(x) ls 1 with lines'
+	if plot.fit:
+		s = s +	', f(x) ls 1 with lines'
 
 	g(s)
 
 	
 
-	g('set term '+plot.term)
+	
 	g('set output "'+plot.output+'"')
 
 #TODO: just random values for A4 paper LaTeX. Give chance to change.
 	if plot.term == "epslatex":
-		
+		g('set term epslatex size 16.5cm,10cm')
 		g('set format xy "$%g$"')
 
-		if plot.xscale and plot.yscale:
-			g('set size '+str(plot.xscale)+','+str(plot.yscale))
+		#if plot.xscale and plot.yscale:
+			#g('set size '+str(plot.xscale)+','+str(plot.yscale))
 
-
-	#g('set style line 1 lc rgb \'black\' pt 7 ps 2 lt 5 lw 3 # --- blue')
-	
+	else:
+		g('set term '+plot.term+' size 1600,900 font "sansserif, '+\
+		plot.fontsize+'"')
 
 	g('replot')
 
