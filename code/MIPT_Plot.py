@@ -1,4 +1,4 @@
-from numpy import *
+#from numpy import *
 import Gnuplot, Gnuplot.funcutils, os, pyperclip, sys, copy
 #s_settings = ["output","x_title","y_title","term"]
 #i_settings = ["x_min","x_max","y_min","y_max","font_size"]
