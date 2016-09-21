@@ -87,13 +87,13 @@ def loadsettings(self, filename):
 				self.y_title = value
 
 			elif name == "x_min":
-				self.x_min = int(value)
+				self.x_min = float(value)
 			elif name == "x_max":
-				self.x_max = int(value)
+				self.x_max = float(value)
 			elif name == "y_min":
-				self.y_min = int(value)
+				self.y_min = float(value)
 			elif name == "y_max":
-				self.y_max = int(value)
+				self.y_max = float(value)
 
 			elif name == "font_size":
 				self.font_size = int(value)
