@@ -32,7 +32,8 @@ class C_Plotter(object):
 		self.y_max = None
 
 		self.extra = ""
-		self.plots = []
+		self.plot = None
+		self.plots_num = 0
 
 		self.g = Gnuplot.Gnuplot(debug=0)
 
@@ -43,7 +44,7 @@ class C_Plot(object):
 		C_Plot.index +=1
 		self.tempname = "data" + str(C_Plot.index) + '.mptplt'
 		self.fit = 0
-		self.plots_num = 1
+		
 
 		self.x_error = 0
 		self.y_error = 0
@@ -81,6 +82,9 @@ def parse(line):
 
 def loadsettings(self, filename):
 	file = open(filename, "r")
+
+	self.plot = C_Plot()
+	plot = self.plot
 	
 	for line in file:
 		ret = parse(line)
@@ -116,22 +120,8 @@ def loadsettings(self, filename):
 
 			elif name == "extra":
 				self.extra = self.extra + value + '\n'
-			else: 
-				pass
 
-
-# TODO: revise
-def loadfile(self, filename):
-	file = open(filename, "r")
-
-
-	plot = C_Plot()
-	
-	for line in file:
-		ret = parse(line)
-		if ret:
-			[name, value] = ret
-			if name == "x_error":
+			elif name == "x_error":
 				plot.x_error = int(value)
 			elif name == "y_error":
 				plot.y_error = int(value)
@@ -154,30 +144,30 @@ def loadfile(self, filename):
 			elif name == "fit":
 				plot.fit = int(value)
 			elif name == "plots_num":
-				plot.plots_num = int(value)
+				self.plots_num = int(value)
 
 			elif name == "accuracy":
 				plot.accuracy = int(value)
-
 
 			elif name == "data":
 				break
 			else: 
 				pass
 
-	self.copydata(file, plot)
+	self.copydata(file)
 	file.close()
 
+
+
 # TODO: revise and join with previous
-def copydata(self, file, plot):
-	tempfile = open(plot.tempname, "w")
+def copydata(self, file):
+	tempfile = open(self.plot.tempname, "w")
 	for line in file:
 		if parse(line):
 			tempfile.write(' '.join(line.strip(' \n').replace(',', '.').split(' ')))
 			tempfile.write('\n')
 
 
-	self.plots.append(plot)
 	file.close()
 	tempfile.close()
 
@@ -242,106 +232,104 @@ def init_g(self, preview):
 		
 
 
-def plot(self, preview = 0):
+def doplot(self, preview = 0):
 	self.init_g(preview)
 
 	if (preview):
 		self.s_plot = ""
 
-		index = 0
+		plot = self.plot
+		column = 1
 
-		for plot in self.plots:
-			column = 1
+		for i in xrange(1, self.plots_num+1):
+			self.g('print "---------------------------------------------------------------------------------------------"')
+			self.g('print "PLOTTING Graph number ' + str(i)+'"')
+			self.g('print "---------------------------------------------------------------------------------------------"')
 
-			for i in xrange(1, plot.plots_num+1):
-				index += 1
-				self.g('print "---------------------------------------------------------------------------------------------"')
-				self.g('print "PLOTTING Graph number ' + str(index)+'"')
-				self.g('print "---------------------------------------------------------------------------------------------"')
+			if plot.color is None:
+				color = i
+			else:
+				color = plot.color
 
-				if plot.color is None:
-					color = i
-				else:
-					color = plot.color
+			s = 'set style line ' + str(i*2) +' lc ' + str(color) + ' pt 7 ps 1.5 lt 5 lw 3\n'
+			s += 'set style line ' + str(i*2-1) + ' lc ' + str(color) + ' pt 7 ps 0 lt 5 lw 1\n'
+				
 
-				s = 'set style line ' + str(index*2) +' lc ' + str(color) + ' pt 7 ps 1.5 lt 5 lw 3\n'
-				s += 'set style line ' + str(index*2-1) + ' lc ' + str(color) + ' pt 7 ps 0 lt 5 lw 1\n'
-					
+			s += plot.extra
 
-				s += plot.extra
+			self.g(s)
+
+
+			s_using_main = str(column) + ':' + str(column+1)
+
+			if plot.fit:
+				self.g('f'+str(i)+'(x)=a'+str(i)+'*x+b'+str(i)+'')
+				self.g('fit f'+str(i)+'(x) "' + plot.tempname + '" using ' + s_using_main + ' via a'+str(i)+',b'+str(i)+'')
+
+			if plot.label and plot.fit and (plot.plots_num == 1):
+				s = 'set label sprintf('+\
+				('"$K = \\\\left(%.' + str(plot.accuracy) + 'f\\\\pm%.' + str(plot.accuracy) + 'f\\\\right)$ ' if self.term == "epslatex" else '"K = (%.' + str(plot.accuracy) + 'f+-%.' + str(plot.accuracy) + 'f) ')+\
+				(plot.text if plot.text else "")+\
+				'", a'+str(i)+', a'+str(i)+'_err)'
+
+
+
+				if (plot.label_x is not None) and (plot.label_y is not None):
+					s += ' at '+str(plot.label_x)+','+\
+					str(plot.label_y)
+				elif (self.x_max is not None) and (self.y_max is not None):
+					s += ' at '+str(self.x_max*0.1)+','+\
+					str(self.y_max*0.9)
+
 
 				self.g(s)
-
-
-				s_using_main = str(column) + ':' + str(column+1)
-
-				if plot.fit:
-					self.g('f'+str(index)+'(x)=a'+str(index)+'*x+b'+str(index)+'')
-					self.g('fit f'+str(index)+'(x) "' + plot.tempname + '" using ' + s_using_main + ' via a'+str(index)+',b'+str(index)+'')
-
-				if plot.label and plot.fit and (plot.plots_num == 1):
-					s = 'set label sprintf('+\
-					('"$K = \\\\left(%.' + str(plot.accuracy) + 'f\\\\pm%.' + str(plot.accuracy) + 'f\\\\right)$ ' if self.term == "epslatex" else '"K = (%.' + str(plot.accuracy) + 'f+-%.' + str(plot.accuracy) + 'f) ')+\
-					(plot.text if plot.text else "")+\
-					'", a'+str(index)+', a'+str(index)+'_err)'
-
-
-
-					if (plot.label_x is not None) and (plot.label_y is not None):
-						s += ' at '+str(plot.label_x)+','+\
-						str(plot.label_y)
-					elif (self.x_max is not None) and (self.y_max is not None):
-						s += ' at '+str(self.x_max*0.1)+','+\
-						str(self.y_max*0.9)
-
-
-					self.g(s)
-			
 		
+	
 
-				filename =  '"' + plot.tempname + '"'
+			filename =  '"' + plot.tempname + '"'
 
 
-				if plot.x_error and plot.y_error:
-					s_using = ':'.join(map(str, xrange(column, column+4)))
-					column += 3
-					s_with = 'xyerrorbars'
+			if plot.x_error and plot.y_error:
+				s_using = ':'.join(map(str, xrange(column, column+4)))
+				column += 3
+				s_with = 'xyerrorbars'
 
-				elif plot.x_error:
-					s_using = ':'.join(map(str, xrange(column, column+3)))
-					column += 2
-					s_with = 'xerrorbars'
+			elif plot.x_error:
+				s_using = ':'.join(map(str, xrange(column, column+3)))
+				column += 2
+				s_with = 'xerrorbars'
 
-				elif plot.y_error:
-					s_using = ':'.join(map(str, xrange(column, column+3)))
-					column += 2
-					s_with = 'yerrorbars'
+			elif plot.y_error:
+				s_using = ':'.join(map(str, xrange(column, column+3)))
+				column += 2
+				s_with = 'yerrorbars'
 
-				else:
-					s_using = ':'.join(map(str, xrange(column, column+2)))
-					column += 2
-					s_with = 'points'
+			else:
+				s_using = ':'.join(map(str, xrange(column, column+2)))
+				column += 2
+				s_with = 'points'
 
-				s = filename + ' using ' + s_using_main +\
-						' ls ' + str(index*2) +', '+ filename + ' using '+\
-						s_using + ' ls ' + str(index*2-1) + ' with ' + s_with
+			s = filename + ' using ' + s_using_main +\
+					' ls ' + str(i*2) +', '+ filename + ' using '+\
+					s_using + ' ls ' + str(i*2-1) + ' with ' + s_with
 
-					
-				if plot.fit:
-					s +=	', f'+str(index)+'(x) ls ' + str(index*2) +' with lines'
+				
+			if plot.fit:
+				s +=	', f'+str(i)+'(x) ls ' + str(i*2) +' with lines'
 
-				#self.g(s)
-				self.s_plot += s + ', '
+			#self.g(s)
+			self.s_plot += s + ', '
 
-		self.index = index
+	
 
 	self.g('plot ' + self.s_plot.rstrip(' ,'))
 				
 def dump(self):
-	self.g('print "\\n\\n                 K               K_err"')
-	for i in xrange(1, self.index+1):
-		s = 'print "Graph N '+str(i)+' ", a'+str(i)+', a' +str(i)+'_err, "\\n"'
-		self.g(s)
+	if self.plot.fit:
+		self.g('print "\\n\\n                 K               K_err"')
+		for i in xrange(1, self.plots_num+1):
+			s = 'print "Graph N '+str(i)+' ", a'+str(i)+', a' +str(i)+'_err, "\\n"'
+			self.g(s)
 
 
 
@@ -349,8 +337,7 @@ def dump(self):
 
 C_Plotter.copydata = copydata
 C_Plotter.loadsettings = loadsettings
-C_Plotter.loadfile = loadfile
-C_Plotter.plot = plot
+C_Plotter.doplot = doplot
 C_Plotter.init_g = init_g
 C_Plotter.dump = dump
 
@@ -358,17 +345,15 @@ C_Plotter.dump = dump
 # TODO: everywhere, implement error checks
 if __name__ == "__main__":
 
-	if (len(sys.argv) < 2):
-		print "Using: MIPT_Plot.py [settings] [datafile1] [datafile2]..."
+	if (len(sys.argv) != 2):
+		print "Using: MIPT_Plot.py [file]"
 		sys.exit()
 
 	plotter = C_Plotter()
 	
+	
 	plotter.loadsettings(sys.argv[1])
 
-	for argv in (sys.argv[2:]):
-		plotter.loadfile(argv)
-
-	plotter.plot(preview=1)
-	plotter.plot(preview=0)
+	plotter.doplot(preview=1)
+	plotter.doplot(preview=0)
 	plotter.dump()
