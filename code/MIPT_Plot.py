@@ -53,12 +53,12 @@ class C_Plot(object):
 		self.label_x = None
 		self.label_y = None
 		self.text = None
-		
-		self.extra = ""
 
 		self.color = None
 
 		self.accuracy = 2
+		self.usingtwo = None
+		self.usingall = None
 
 
 
@@ -134,9 +134,6 @@ def loadsettings(self, filename):
 				plot.label_y = int(value)
 			elif name == "text":
 				plot.text = value
-
-			elif name == "extra":
-				plot.extra = plot.extra + value + '\n'
 
 			elif name == "color":
 				plot.color = int(value)
@@ -254,8 +251,6 @@ def doplot(self, preview = 0):
 			s = 'set style line ' + str(i*2) +' lc ' + str(color) + ' pt 7 ps 1.5 lt 5 lw 3\n'
 			s += 'set style line ' + str(i*2-1) + ' lc ' + str(color) + ' pt 7 ps 0 lt 5 lw 1\n'
 				
-
-			s += plot.extra
 
 			self.g(s)
 
