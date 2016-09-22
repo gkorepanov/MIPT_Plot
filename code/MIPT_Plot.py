@@ -4,7 +4,14 @@ import Gnuplot, Gnuplot.funcutils, os, pyperclip, sys, copy
 #i_settings = ["x_min","x_max","y_min","y_max","font_size"]
 
 
-epslatex_settings = 'set format xy "$%g$"'
+epslatex_settings = '''
+set format xy "$%g$"
+set ylabel offset 2.3, 0
+
+set rmargin 0.1
+set lmargin 3.5
+
+'''
 
 # Common settings, running everything
 class C_Plotter(object):
@@ -12,7 +19,7 @@ class C_Plotter(object):
 		self.font_size = "22"
 		self.term = "epslatex"
 		self.term_x = '16.5cm'
-		self.term_y = '10cm'
+		self.term_y = '12cm'
 		self.output = "out.tex"
 
 		self.x_title = None
@@ -27,7 +34,7 @@ class C_Plotter(object):
 		self.extra = ""
 		self.plots = []
 
-		self.g = Gnuplot.Gnuplot(debug=1)
+		self.g = Gnuplot.Gnuplot(debug=0)
 
 # Each plot specific settings
 class C_Plot(object):
@@ -50,6 +57,8 @@ class C_Plot(object):
 
 		self.color = None
 
+		self.accuracy = 2
+
 
 
 def parse(line):
@@ -66,7 +75,7 @@ def parse(line):
 
 	name = name.rstrip(':')
 
-	print line
+	#print line
 	return [name, value]
 
 
@@ -147,6 +156,10 @@ def loadfile(self, filename):
 			elif name == "plots_num":
 				plot.plots_num = int(value)
 
+			elif name == "accuracy":
+				plot.accuracy = int(value)
+
+
 			elif name == "data":
 				break
 			else: 
@@ -175,7 +188,7 @@ def init_g(self, preview):
 	if preview:
 		s = 'set term wxt size 1600,900 '
 		s += 'font "sansserif, ' + self.font_size + '"\n'
-		s += 'set multiplot\n'
+		#s += 'set multiplot\n'
 
 		self.g(s)
 
@@ -188,10 +201,12 @@ def init_g(self, preview):
 
 		set fit errorvariables
 
+
 		unset key
 		'''
 
 		self.g(s)
+		self.g(self.extra)
 
 		
 		if self.x_title is not None:
@@ -211,8 +226,8 @@ def init_g(self, preview):
 
 	else:
 		raw_input(' ')
-		self.g.reset()
-		self.g('unset multiplot')
+		#self.g.reset()
+		self.g('unset key')
 		self.g('set output "' + self.output + '"')
 
 
@@ -230,93 +245,103 @@ def init_g(self, preview):
 def plot(self, preview = 0):
 	self.init_g(preview)
 
+	if (preview):
+		self.s_plot = ""
 
-	index = 0
+		index = 0
 
-	for plot in self.plots:
-		column = 1
+		for plot in self.plots:
+			column = 1
 
-		for i in xrange(1, plot.plots_num+1):
-			index += 1
-			print "---------------------------------------------------------------------------------------------"
-			print "PLOTTING Graph number " + str(index)
-			print "---------------------------------------------------------------------------------------------"
+			for i in xrange(1, plot.plots_num+1):
+				index += 1
+				self.g('print "---------------------------------------------------------------------------------------------"')
+				self.g('print "PLOTTING Graph number ' + str(index)+'"')
+				self.g('print "---------------------------------------------------------------------------------------------"')
 
-			if plot.color is None:
-				color = i
-			else:
-				color = plot.color
+				if plot.color is None:
+					color = i
+				else:
+					color = plot.color
 
-			s = '''
-				set style line 1 lc ''' + str(color) + ''' pt 7 ps 1.2 lt 5 lw 3
-				set style line 2 lc ''' + str(color) + ''' pt 7 ps 0 lt 5 lw 1
-				'''
+				s = 'set style line ' + str(index*2) +' lc ' + str(color) + ' pt 7 ps 1.5 lt 5 lw 3\n'
+				s += 'set style line ' + str(index*2-1) + ' lc ' + str(color) + ' pt 7 ps 0 lt 5 lw 1\n'
+					
 
-			s += plot.extra
-
-			self.g(s)
-
-
-			s_using_main = str(column) + ':' + str(column+1)
-
-			if plot.fit:
-				self.g('f(x)=a*x+b')
-				self.g('fit f(x) "' + plot.tempname + '" using ' + s_using_main + ' via a,b')
-
-			if plot.label and plot.fit and (plot.plots_num == 1):
-				s = 'set label sprintf('+\
-				('"$K = %.2f\\\\pm%.2f$' if self.term == "epslatex" else '"K = %.2f+-%.2f')+\
-				(plot.text if plot.text else "")+\
-				'", a, a_err)'
-
-
-
-				if (plot.label_x is not None) and (plot.label_y is not None):
-					s += ' at '+str(plot.label_x)+','+\
-					str(plot.label_y)
-				elif (self.x_max is not None) and (self.y_max is not None):
-					s += ' at '+str(self.x_max*0.1)+','+\
-					str(self.y_max*0.9)
-
+				s += plot.extra
 
 				self.g(s)
+
+
+				s_using_main = str(column) + ':' + str(column+1)
+
+				if plot.fit:
+					self.g('f'+str(index)+'(x)=a'+str(index)+'*x+b'+str(index)+'')
+					self.g('fit f'+str(index)+'(x) "' + plot.tempname + '" using ' + s_using_main + ' via a'+str(index)+',b'+str(index)+'')
+
+				if plot.label and plot.fit and (plot.plots_num == 1):
+					s = 'set label sprintf('+\
+					('"$K = \\\\left(%.' + str(plot.accuracy) + 'f\\\\pm%.' + str(plot.accuracy) + 'f\\\\right)$ ' if self.term == "epslatex" else '"K = (%.' + str(plot.accuracy) + 'f+-%.' + str(plot.accuracy) + 'f) ')+\
+					(plot.text if plot.text else "")+\
+					'", a'+str(index)+', a'+str(index)+'_err)'
+
+
+
+					if (plot.label_x is not None) and (plot.label_y is not None):
+						s += ' at '+str(plot.label_x)+','+\
+						str(plot.label_y)
+					elif (self.x_max is not None) and (self.y_max is not None):
+						s += ' at '+str(self.x_max*0.1)+','+\
+						str(self.y_max*0.9)
+
+
+					self.g(s)
+			
 		
-	
 
-			filename =  '"' + plot.tempname + '"'
+				filename =  '"' + plot.tempname + '"'
 
 
-			if plot.x_error and plot.y_error:
-				s_using = ':'.join(map(str, xrange(column, column+4)))
-				column += 3
-				s_with = 'xyerrorbars'
+				if plot.x_error and plot.y_error:
+					s_using = ':'.join(map(str, xrange(column, column+4)))
+					column += 3
+					s_with = 'xyerrorbars'
 
-			elif plot.x_error:
-				s_using = ':'.join(map(str, xrange(column, column+3)))
-				column += 2
-				s_with = 'xerrorbars'
+				elif plot.x_error:
+					s_using = ':'.join(map(str, xrange(column, column+3)))
+					column += 2
+					s_with = 'xerrorbars'
 
-			elif plot.y_error:
-				s_using = ':'.join(map(str, xrange(column, column+3)))
-				column += 2
-				s_with = 'yerrorbars'
+				elif plot.y_error:
+					s_using = ':'.join(map(str, xrange(column, column+3)))
+					column += 2
+					s_with = 'yerrorbars'
 
-			else:
-				s_using = ':'.join(map(str, xrange(column, column+2)))
-				column += 2
-				s_with = 'points'
+				else:
+					s_using = ':'.join(map(str, xrange(column, column+2)))
+					column += 2
+					s_with = 'points'
 
-			s = 'plot ' + filename + ' using ' + s_using_main +\
-					' ls 1, '+ filename + ' using '+\
-					s_using + ' ls 2 with ' + s_with
+				s = filename + ' using ' + s_using_main +\
+						' ls ' + str(index*2) +', '+ filename + ' using '+\
+						s_using + ' ls ' + str(index*2-1) + ' with ' + s_with
 
+					
+				if plot.fit:
+					s +=	', f'+str(index)+'(x) ls ' + str(index*2) +' with lines'
+
+				#self.g(s)
+				self.s_plot += s + ', '
+
+		self.index = index
+
+	self.g('plot ' + self.s_plot.rstrip(' ,'))
 				
-			if plot.fit:
-				s +=	', f(x) ls 1 with lines'
-
-			self.g(s)
-			#if preview:
-				#raw_input('')
+def dump(self):
+	self.g('print "\\n\\n                 K               K_err"')
+	for i in xrange(1, self.index+1):
+		s = 'print "Graph N '+str(i)+' ", a'+str(i)+', a' +str(i)+'_err, "\\n"'
+		self.g(s)
 
 
 
@@ -327,6 +352,7 @@ C_Plotter.loadsettings = loadsettings
 C_Plotter.loadfile = loadfile
 C_Plotter.plot = plot
 C_Plotter.init_g = init_g
+C_Plotter.dump = dump
 
 
 # TODO: everywhere, implement error checks
@@ -345,3 +371,4 @@ if __name__ == "__main__":
 
 	plotter.plot(preview=1)
 	plotter.plot(preview=0)
+	plotter.dump()
