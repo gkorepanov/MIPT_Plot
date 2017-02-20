@@ -1,13 +1,15 @@
 # MIPT_Plot
-- Небольшой скрипт для быстрого  **автоматического** создания простейших графиков
-- Автоматический расчет коэффициентов МНК с рассчетом погрешностей
+- Simple script for **quick** plots creation
+- Automatic calculations of coefficients by **least squares** with errors 
 ![LaTeX](https://github.com/gkorepanov/MIPT_Plot/blob/master/screenshots/LaTeX.png)
-- Версия сырая, требует допила.
-- Проверок на ошибки нет.
-- В LaTeX даёт перкрасный результат, под остальные терминалы требует индивидуальной настройки/общего допила
+- It's a **beta** version now, need to be improved
+- Gives an excellent result in LaTeX, other terminals are to be developed further
 
+Look examples for settings description.
+Running:
+> python MIPT_Plot.py [myfile.dat]
 
-###Instruction:
+###Instruction (in Russian):
 1) Создаём файл произвольного формата следующего содержания (назначения настроек понятны из комментариев, обязательно указывать только output):
 ```Python
 # Это комментарий
